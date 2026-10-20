@@ -24,7 +24,7 @@ device_mode = st.sidebar.selectbox(
 
 # Set grid size dynamically based on selection
 if "6x6" in device_mode:
-    GRID_SIZE = 5
+    GRID_SIZE = 6
 else:
     GRID_SIZE = 10
 

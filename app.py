@@ -11,37 +11,43 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom Styling & Header
 st.title("🤖 AI-Powered Pathfinding Lab")
-st.caption("Advanced Algorithm & Heuristic Benchmark Dashboard | IMSciences Demo")
+st.caption("Interactive Grid Editor & Algorithm Benchmark | IMSciences Demo")
 
-# Grid dimensions
-GRID_SIZE = 12
+# Grid dimensions (10x10 is optimal for mobile tapping)
+GRID_SIZE = 10
 
 # Initialize session state for grid layout
 if "grid" not in st.session_state:
     st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
-    # Default maze walls
-    st.session_state.grid[3, 1:9] = 1
-    st.session_state.grid[7, 3:11] = 1
-    st.session_state.grid[5, 5] = 1
+    # Default initial obstacle walls
+    st.session_state.grid[3, 2:8] = 1
+    st.session_state.grid[6, 1:7] = 1
 
 start_pos = (0, 0)
 goal_pos = (GRID_SIZE - 1, GRID_SIZE - 1)
 
-# Helper: Generate random obstacle layout
-def generate_random_maze():
+# Helper: Preset Actions
+def randomize_maze():
     np.random.seed(int(time.time()))
     new_grid = np.random.choice([0, 1], size=(GRID_SIZE, GRID_SIZE), p=[0.75, 0.25])
     new_grid[start_pos] = 0
     new_grid[goal_pos] = 0
     st.session_state.grid = new_grid
 
+def clear_grid():
+    st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
+
+def reset_default():
+    st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
+    st.session_state.grid[3, 2:8] = 1
+    st.session_state.grid[6, 1:7] = 1
+
 # Heuristic Function: Manhattan Distance
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-# Robust Pathfinding Solver returning visited nodes and path
+# Robust Pathfinding Solver
 def run_pathfinding(use_heuristic=False):
     grid = st.session_state.grid
     pq = []
@@ -88,10 +94,6 @@ def run_pathfinding(use_heuristic=False):
 # Plotly Visual Grid Generator
 def plot_grid(visited_nodes, path, title_text):
     grid_matrix = st.session_state.grid.copy()
-    
-    # Color mapping: 0=Open(White), 1=Wall(DarkGray), Visited=LightBlue, Path=Gold, Start/Goal=Green/Red
-    # We will build a numeric matrix for Plotly Heatmap
-    # 0: Open, 1: Wall, 2: Visited, 3: Path, 4: Start, 5: Goal
     display_matrix = np.zeros((GRID_SIZE, GRID_SIZE))
     
     for r in range(GRID_SIZE):
@@ -110,7 +112,6 @@ def plot_grid(visited_nodes, path, title_text):
     display_matrix[start_pos] = 4 # Start
     display_matrix[goal_pos] = 5 # Goal
 
-    # Custom Color Scale
     colorscale = [
         [0.0, "#ffffff"], # Open Path (White)
         [0.2, "#333333"], # Wall (Dark Gray)
@@ -133,51 +134,68 @@ def plot_grid(visited_nodes, path, title_text):
         xaxis=dict(showticklabels=False, ticks=""),
         yaxis=dict(showticklabels=False, ticks="", autorange="reversed"),
         margin=dict(l=10, r=10, t=30, b=10),
-        height=300
+        height=280
     )
     return fig
 
-# --- UI CONTROLS ---
-st.subheader("🗺️ 1. Obstacle Configuration")
-col_btn1, col_btn2 = st.columns(2)
-with col_btn1:
-    if st.button("🎲 Generate Random Maze", use_container_width=True):
-        generate_random_maze()
-        st.rerun()
-with col_btn2:
-    if st.button("🔄 Reset Default Maze", use_container_width=True):
-        st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
-        st.session_state.grid[3, 1:9] = 1
-        st.session_state.grid[7, 3:11] = 1
-        st.rerun()
+# --- SECTION 1: INTERACTIVE GRID EDITOR ---
+st.subheader("🗺️ 1. Interactive Grid Editor")
+st.write("Tap any cell to **manually draw or remove walls** (🚀 = Start, 🎯 = Goal, ⬛ = Wall, ⬜ = Open):")
 
-# Preview Initial Grid
-fig_preview = plot_grid([], [], "Current Maze Layout (🚀 Start -> 🎯 Goal)")
-st.plotly_chart(fig_preview, use_container_width=True)
+# Render clickable grid buttons
+for r in range(GRID_SIZE):
+    cols = st.columns(GRID_SIZE)
+    for c in range(GRID_SIZE):
+        if (r, c) == start_pos:
+            cols[c].button("🚀", key=f"btn_{r}_{c}", disabled=True)
+        elif (r, c) == goal_pos:
+            cols[c].button("🎯", key=f"btn_{r}_{c}", disabled=True)
+        else:
+            val = st.session_state.grid[r, c]
+            label = "⬛" if val == 1 else "⬜"
+            if cols[c].button(label, key=f"btn_{r}_{c}"):
+                st.session_state.grid[r, c] = 1 if val == 0 else 0
+                st.rerun()
+
+# Preset Action Buttons
+b1, b2, b3 = st.columns(3)
+with b1:
+    if st.button("🎲 Randomize", use_container_width=True):
+        randomize_maze()
+        st.rerun()
+with b2:
+    if st.button("🧹 Clear All", use_container_width=True):
+        clear_grid()
+        st.rerun()
+with b3:
+    if st.button("🔄 Reset Default", use_container_width=True):
+        reset_default()
+        st.rerun()
 
 st.divider()
 
-st.subheader("🚀 2. Execute Algorithm Benchmark")
-if st.button("⚡ Run Dijkstra vs AI A* Comparison", type="primary", use_container_width=True):
-    with st.spinner("Executing search algorithms..."):
+# --- SECTION 2: BENCHMARK EXECUTION ---
+st.subheader("⚡ 2. Run Algorithm Benchmark")
+if st.button("🚀 Run Dijkstra vs AI A* Race", type="primary", use_container_width=True):
+    with st.spinner("Executing algorithms..."):
         time.sleep(0.3)
         d_visited, d_path = run_pathfinding(use_heuristic=False)
         a_visited, a_path = run_pathfinding(use_heuristic=True)
 
-    st.success("Benchmark Complete!")
+    st.success("Race Complete!")
 
     # Metrics Row
     m1, m2 = st.columns(2)
     with m1:
         st.metric(label="🔴 Dijkstra Nodes Explored", value=len(d_visited))
     with m2:
-        st.metric(label="🟢 A* Search Nodes Explored", value=len(a_visited), delta=f"{len(d_visited) - len(a_visited)} fewer nodes!")
+        st.metric(label="🟢 A* Nodes Explored", value=len(a_visited), delta=f"{len(d_visited) - len(a_visited)} fewer nodes!")
 
-    # Side-by-Side Plotly Visual Comparison
+    # Side-by-Side Plotly Visual Heatmaps
     col_map1, col_map2 = st.columns(2)
     
     with col_map1:
-        fig_d = plot_grid(d_visited, d_path, "🔴 Dijkstra (Blind Search Wave)")
+        fig_d = plot_grid(d_visited, d_path, "🔴 Dijkstra (Blind Search)")
         st.plotly_chart(fig_d, use_container_width=True)
         
     with col_map2:
@@ -187,4 +205,4 @@ if st.button("⚡ Run Dijkstra vs AI A* Comparison", type="primary", use_contain
     if len(a_visited) < len(d_visited):
         efficiency = round((len(d_visited) - len(a_visited)) / len(d_visited) * 100, 1)
         st.balloons()
-        st.info(f"💡 **AI Advantage:** A* Search was **{efficiency}% more efficient** because its heuristic compass steered it directly toward the target destination while Dijkstra spread out blindly!")
+        st.info(f"💡 **AI Advantage:** A* Search was **{efficiency}% more efficient** on your custom layout!")

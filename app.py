@@ -11,6 +11,26 @@ st.set_page_config(
     layout="centered"
 )
 
+# --- CUSTOM CSS TO PREVENT MOBILE COLUMN STACKING ---
+st.markdown("""
+<style>
+    /* Force Streamlit columns to stay side-by-side on mobile devices */
+    [data-testid="column"] {
+        width: fit-content !important;
+        flex: 1 !important;
+        min-width: 35px !important;
+    }
+    /* Make grid buttons compact and square */
+    .stButton button {
+        width: 100% !important;
+        height: 40px !important;
+        font-size: 16px !important;
+        padding: 0px !important;
+        border-radius: 4px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🤖 AI-Powered Pathfinding Lab")
 st.caption("Interactive Grid Editor & Algorithm Benchmark | IMSciences Demo")
 
@@ -18,13 +38,13 @@ st.caption("Interactive Grid Editor & Algorithm Benchmark | IMSciences Demo")
 st.sidebar.header("📱 Display Settings")
 device_mode = st.sidebar.selectbox(
     "Select Grid Resolution:",
-    ["6x6 (Mobile Optimized)", "10x10 (Desktop HD)"],
+    ["5x5 (Mobile Optimized)", "10x10 (Desktop HD)"],
     index=0
 )
 
 # Set grid size dynamically based on selection
-if "6x6" in device_mode:
-    GRID_SIZE = 6
+if "5x5" in device_mode:
+    GRID_SIZE = 5
 else:
     GRID_SIZE = 10
 
@@ -35,8 +55,8 @@ goal_pos = (GRID_SIZE - 1, GRID_SIZE - 1)
 if "grid_size_tracker" not in st.session_state or st.session_state.grid_size_tracker != GRID_SIZE:
     st.session_state.grid_size_tracker = GRID_SIZE
     st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
-    if GRID_SIZE == 6:
-        st.session_state.grid[2, 1:5] = 1 # Default wall for 6x6
+    if GRID_SIZE == 5:
+        st.session_state.grid[2, 1:4] = 1 # Default wall for 5x5
     else:
         st.session_state.grid[3, 2:8] = 1 # Default wall for 10x10
         st.session_state.grid[6, 1:7] = 1
@@ -54,8 +74,8 @@ def clear_grid():
 
 def reset_default():
     st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
-    if GRID_SIZE == 6:
-        st.session_state.grid[2, 1:5] = 1
+    if GRID_SIZE == 5:
+        st.session_state.grid[2, 1:4] = 1
     else:
         st.session_state.grid[3, 2:8] = 1
         st.session_state.grid[6, 1:7] = 1
@@ -151,7 +171,7 @@ def plot_grid(visited_nodes, path, title_text):
         xaxis=dict(showticklabels=False, ticks=""),
         yaxis=dict(showticklabels=False, ticks="", autorange="reversed"),
         margin=dict(l=10, r=10, t=30, b=10),
-        height=280
+        height=260
     )
     return fig
 

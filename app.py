@@ -14,18 +14,32 @@ st.set_page_config(
 st.title("🤖 AI-Powered Pathfinding Lab")
 st.caption("Interactive Grid Editor & Algorithm Benchmark | IMSciences Demo")
 
-# Grid dimensions (10x10 is optimal for mobile tapping)
-GRID_SIZE = 10
+# --- SIDEBAR DEVICE & RESOLUTION CONFIGURATION ---
+st.sidebar.header("📱 Display Settings")
+device_mode = st.sidebar.selectbox(
+    "Select Grid Resolution:",
+    ["6x6 (Mobile Optimized)", "10x10 (Desktop HD)"],
+    index=0
+)
 
-# Initialize session state for grid layout
-if "grid" not in st.session_state:
-    st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
-    # Default initial obstacle walls
-    st.session_state.grid[3, 2:8] = 1
-    st.session_state.grid[6, 1:7] = 1
+# Set grid size dynamically based on selection
+if "6x6" in device_mode:
+    GRID_SIZE = 6
+else:
+    GRID_SIZE = 10
 
 start_pos = (0, 0)
 goal_pos = (GRID_SIZE - 1, GRID_SIZE - 1)
+
+# Initialize session state for grid layout
+if "grid_size_tracker" not in st.session_state or st.session_state.grid_size_tracker != GRID_SIZE:
+    st.session_state.grid_size_tracker = GRID_SIZE
+    st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
+    if GRID_SIZE == 6:
+        st.session_state.grid[2, 1:5] = 1 # Default wall for 6x6
+    else:
+        st.session_state.grid[3, 2:8] = 1 # Default wall for 10x10
+        st.session_state.grid[6, 1:7] = 1
 
 # Helper: Preset Actions
 def randomize_maze():
@@ -40,8 +54,11 @@ def clear_grid():
 
 def reset_default():
     st.session_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
-    st.session_state.grid[3, 2:8] = 1
-    st.session_state.grid[6, 1:7] = 1
+    if GRID_SIZE == 6:
+        st.session_state.grid[2, 1:5] = 1
+    else:
+        st.session_state.grid[3, 2:8] = 1
+        st.session_state.grid[6, 1:7] = 1
 
 # Heuristic Function: Manhattan Distance
 def heuristic(a, b):
@@ -139,10 +156,10 @@ def plot_grid(visited_nodes, path, title_text):
     return fig
 
 # --- SECTION 1: INTERACTIVE GRID EDITOR ---
-st.subheader("🗺️ 1. Interactive Grid Editor")
-st.write("Tap any cell to **manually draw or remove walls** (🚀 = Start, 🎯 = Goal, ⬛ = Wall, ⬜ = Open):")
+st.subheader(f"🗺️ 1. Interactive Grid Editor ({GRID_SIZE}x{GRID_SIZE})")
+st.write("Tap any cell to **draw or remove walls** (🚀 = Start, 🎯 = Goal, ⬛ = Wall, ⬜ = Open):")
 
-# Render clickable grid buttons
+# Render clickable grid buttons matching GRID_SIZE
 for r in range(GRID_SIZE):
     cols = st.columns(GRID_SIZE)
     for c in range(GRID_SIZE):
